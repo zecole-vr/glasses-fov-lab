@@ -82,6 +82,13 @@ public final class FovServer {
                                 case "STATUS": result=state(); break;
                                 case "STATUS2": result=state(); break;
                                 case "STATUS3": result=state(); break;
+                                case "STATUS4":
+                                    result=Arrays.equals(target, new String[]{"25","41","35","35"}) ? state() : "DENIED";
+                                    break;
+                                case "ON4":
+                                    result=Arrays.equals(target, new String[]{"25","41","35","35"}) ? applyAndRefresh(true) : "DENIED";
+                                    break;
+                                case "OFF4": result=applyAndRefresh(false); break;
                                 case "ON3": result=applyAndRefresh(true); break;
                                 case "OFF3": result=applyAndRefresh(false); break;
                                 case "ON2": result=applyAndRefresh(true); break;

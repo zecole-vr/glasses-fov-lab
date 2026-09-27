@@ -47,6 +47,9 @@ try {
         }
     }
     $configDir=Join-Path $root '.tools\device-control'
+    # Match the SDK 207 Unity mask's asymmetric angular split. This is our
+    # adjusted device profile, not the CLI's default 31/35 split on Quest 3.
+    $angles=@('25','41','35','35')
     New-Item -ItemType Directory -Force $configDir | Out-Null
     $config=Join-Path $configDir 'bridge.config'
     [IO.File]::WriteAllText($config, (($key)+"`n"+($angles -join "`n")+"`n"),[Text.Encoding]::ASCII)
