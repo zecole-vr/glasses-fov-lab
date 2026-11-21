@@ -89,6 +89,19 @@ public final class FovServer {
                                     result=Arrays.equals(target, new String[]{"25","41","35","35"}) ? applyAndRefresh(true) : "DENIED";
                                     break;
                                 case "OFF4": result=applyAndRefresh(false); break;
+                                case "RELAUNCH4":
+                                    // Fixed target only: the OS FoV is bound to an XR session at launch,
+                                    // so the lab app is restarted after turning the view off.
+                                    result="RELAUNCHING";
+                                    new Thread(() -> {
+                                        try {
+                                            Thread.sleep(400);
+                                            run("/system/bin/am", "force-stop", "com.glasseslab.fov");
+                                            Thread.sleep(300);
+                                            run("/system/bin/am", "start", "-n", "com.glasseslab.fov/com.unity3d.player.UnityPlayerGameActivity");
+                                        } catch (Exception ignored) { }
+                                    }).start();
+                                    break;
                                 case "ON3": result=applyAndRefresh(true); break;
                                 case "OFF3": result=applyAndRefresh(false); break;
                                 case "ON2": result=applyAndRefresh(true); break;

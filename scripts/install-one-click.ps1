@@ -32,9 +32,31 @@ try {
         $adb = Join-Path $root 'platform-tools\adb.exe'
         if (-not (Test-Path -LiteralPath $adb)) { throw 'Download did not contain adb.exe.' }
     }
-    Write-Host 'Glasses FoV Lab - Quest USB installer' -ForegroundColor Cyan
-    Write-Host 'Checking USB devices...'
+    Write-Host 'Glasses FoV Lab - Quest installer (USB / wireless ADB)' -ForegroundColor Cyan
+    Write-Host 'Checking USB / wireless devices...'
     $lines = & $adb devices -l
+    if (-not ($lines | Where-Object { $_ -match '^\S+\s+(device|unauthorized)\b' })) {
+        # Try already-paired wireless debugging devices advertised over mDNS.
+        Write-Host 'No device connected. Looking for a paired wireless-debugging Quest...'
+        $oldPreference = $ErrorActionPreference
+        $ErrorActionPreference = 'Continue'
+        # A freshly started ADB server needs a few seconds to discover mDNS services.
+        for ($scan = 0; $scan -lt 6; $scan++) {
+            $found = @(& $adb mdns services 2>$null | Where-Object { $_ -match '_adb-tls-connect\._tcp' })
+            if ($found.Count -gt 0) { break }
+            Start-Sleep -Seconds 2
+        }
+        foreach ($service in $found) {
+            if ($service -match '_adb-tls-connect\._tcp\s+(\d{1,3}(?:\.\d{1,3}){3}:\d+)') { & $adb connect $Matches[1] | Out-Host }
+        }
+        $ErrorActionPreference = $oldPreference
+        # A freshly connected device can report "offline" for a moment.
+        for ($try = 0; $try -lt 5; $try++) {
+            $lines = & $adb devices -l
+            if ($lines | Where-Object { $_ -match '^\S+\s+device\b' }) { break }
+            Start-Sleep -Seconds 1
+        }
+    }
     if ($LASTEXITCODE -ne 0) { throw 'Could not communicate with ADB.' }
     $quests = @()
     $unauthorized = $false
@@ -49,7 +71,7 @@ try {
     }
     if ($quests.Count -eq 0) {
         if ($unauthorized) { throw 'Put on your Quest and ALLOW USB debugging, then double-click Install-Quest.cmd again.' }
-        throw 'No ready Quest found. Enable developer mode, connect a USB data cable, and allow USB debugging in the headset.'
+        throw 'No ready Quest found. Enable developer mode, connect a USB data cable (or wireless debugging), and allow debugging in the headset.'
     }
     $selected = $quests[0]
     if ($quests.Count -gt 1) {

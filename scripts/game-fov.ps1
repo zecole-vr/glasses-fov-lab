@@ -9,7 +9,7 @@ $cli = Join-Path $toolDir 'metavr.exe'
 try {
     Write-Host '  * Glasses FoV Lab *  made by zecole' -ForegroundColor Magenta
     Write-Host '  Other games / 다른 게임용 시야 설정'
-    Write-Host '  Quest 3 / 3S / Pro · USB debugging required'
+    Write-Host '  Quest 3 / 3S / Pro · USB or wireless debugging required'
     Write-Host ''
     if ($Action -eq 'Menu') {
         Write-Host '  1  글래스 시야 적용 (70 x 66도)'
@@ -46,8 +46,8 @@ try {
     $listCode = $LASTEXITCODE
     $ErrorActionPreference = $oldPreference
     if ($listCode -ne 0) { throw "기기 목록 확인 실패. $errorLog" }
-    $devices = @((($json -join "`n") | ConvertFrom-Json) | Where-Object { $_.state -eq 'device' -and $_.id -notmatch '[.:]' -and ($_.model -match 'Quest' -or $_.device -in @('eureka','panther','cambria','hollywood')) })
-    if ($devices.Count -eq 0) { throw 'Quest를 USB로 연결하고, 헤드셋 안에서 USB 디버깅을 허용한 뒤 다시 실행해주세요.' }
+    $devices = @((($json -join "`n") | ConvertFrom-Json) | Where-Object { $_.state -eq 'device' -and ($_.model -match 'Quest' -or $_.device -in @('eureka','panther','cambria','hollywood')) })
+    if ($devices.Count -eq 0) { throw 'Quest를 USB 또는 무선 디버깅으로 연결하고, 헤드셋 안에서 디버깅을 허용한 뒤 다시 실행해주세요.' }
     Write-Host (($devices | Select-Object id, model | Format-Table -AutoSize | Out-String).Trim())
     # Always select explicitly; never silently use a CLI global default device.
     $ids = @($devices | ForEach-Object {

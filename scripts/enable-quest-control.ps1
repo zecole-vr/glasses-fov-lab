@@ -7,10 +7,29 @@ try {
     if($found) { $paths+=$found.Source }
     $adb=$paths | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
     if(-not $adb) { throw 'Run Install-Quest.cmd first to install the app and ADB.' }
-    $ready=@(& $adb devices | ForEach-Object { if($_ -match '^(\S+)\s+device$' -and $Matches[1] -notmatch '[.:]') { $Matches[1] } })
+    # Accept both USB serials and wireless ADB (ip:port) devices.
+    function Get-ReadySerials { @(& $adb devices | ForEach-Object { if($_ -match '^(\S+)\s+device$') { $Matches[1] } }) }
+    $ready=@(Get-ReadySerials)
+    if($ready.Count -eq 0) {
+        # Try already-paired wireless debugging devices advertised over mDNS.
+        Write-Host 'No device connected. Looking for a paired wireless-debugging Quest...'
+        $ErrorActionPreference='Continue'
+        # A freshly started ADB server needs a few seconds to discover mDNS services.
+        for($scan=0; $scan -lt 6; $scan++) {
+            $found=@(& $adb mdns services 2>$null | Where-Object { $_ -match '_adb-tls-connect\._tcp' })
+            if($found.Count -gt 0) { break }
+            Start-Sleep -Seconds 2
+        }
+        foreach($line in $found) {
+            if($line -match '_adb-tls-connect\._tcp\s+(\d{1,3}(?:\.\d{1,3}){3}:\d+)') { & $adb connect $Matches[1] | Out-Host }
+        }
+        $ErrorActionPreference='Stop'
+        # A freshly connected device can report "offline" for a moment.
+        for($try=0; $try -lt 5; $try++) { $ready=@(Get-ReadySerials); if($ready.Count -gt 0) { break }; Start-Sleep -Seconds 1 }
+    }
     if(-not $Serial -and $ready.Count -eq 1) { $Serial=$ready[0] }
-    if(-not $Serial -and $ready.Count -gt 1) { $Serial=Read-Host ('Enter USB device ID: '+($ready -join ', ')) }
-    if($Serial -notin $ready) { throw 'Connect Quest by USB and allow USB debugging in the headset.' }
+    if(-not $Serial -and $ready.Count -gt 1) { $Serial=Read-Host ('Enter device ID: '+($ready -join ', ')) }
+    if($Serial -notin $ready) { throw 'Connect Quest by USB or wireless debugging, and allow debugging in the headset.' }
     $model=(& $adb -s $Serial shell getprop ro.product.model).Trim()
     if($model -notmatch 'Quest') { throw 'Selected device is not a Quest.' }
     $dex=Join-Path $root 'bridge\bin\classes.dex'
@@ -69,8 +88,9 @@ try {
     if($LASTEXITCODE -ne 0) { throw 'Could not restrict pairing key permissions.' }
     & $adb -s $Serial shell 'CLASSPATH=/data/local/tmp/glasses-fov.dex nohup app_process /system/bin com.glasseslab.bridge.FovServer /data/local/tmp/glasses-fov.config >/data/local/tmp/glasses-fov.log 2>&1 </dev/null &'
     if($LASTEXITCODE -ne 0) { throw 'Could not start device helper.' }
-    Write-Host 'USB setup sent. Open Glasses FoV Lab and check OTHER GAMES status.' -ForegroundColor Green
-    Write-Host 'Press A or click LEFT stick to toggle FoV. The display briefly sleeps and wakes automatically.'
+    $link=if($Serial -match ':') { 'Wireless' } else { 'USB' }
+    Write-Host "$link setup sent. Open Glasses FoV Lab and check OTHER GAMES status." -ForegroundColor Green
+    Write-Host 'Use the GLASSES VIEW switch on the app panel (laser + trigger). The display briefly sleeps and wakes automatically.'
     Write-Host 'You may disconnect the PC. Repeat this setup after headset reboot.'
 } catch {
     Write-Host $_.Exception.Message -ForegroundColor Red
