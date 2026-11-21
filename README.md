@@ -9,7 +9,7 @@ VR 유튜브 크리에이터 제콜이 만들었습니다.
 made by zecole
 
 ## 3. 원클릭 설치 및 사용법
-1. 이 저장소의 Releases에서 **GlassesFoVLab-0.4.5-Windows.zip**을 내려받아 압축을 모두 풉니다. APK만 받으면 PC 활성화 파일이 포함되지 않습니다.
+1. 이 저장소의 Releases에서 **GlassesFoVLab-0.4.6-Windows.zip**을 내려받아 압축을 모두 풉니다. APK만 받으면 PC 활성화 파일이 포함되지 않습니다.
 2. Quest의 개발자 모드를 켜고 Windows PC에 데이터 USB 케이블로 연결한 뒤, 헤드셋에서 USB 디버깅을 허용합니다. 이 PC와 무선 디버깅으로 이미 페어링한 Quest라면 USB 없이 같은 Wi-Fi에서 자동으로 찾아 연결합니다.
 3. **Install-Quest.cmd**를 더블클릭하면 앱을 설치·업데이트하고 실행합니다. ADB가 없으면 최초 한 번 약관 동의 후 공식 도구를 다운로드합니다.
 4. 다른 게임에서도 사용하려면 **Enable-Quest-Control.cmd**를 더블클릭합니다. 최초 실행에는 Meta 공식 CLI 다운로드를 위한 인터넷 연결이 필요합니다. 활성화가 끝나면 USB 케이블을 빼도 됩니다. **이전 버전에서 업데이트한 경우에도 새 ZIP의 이 파일을 한 번 실행해야 합니다.**

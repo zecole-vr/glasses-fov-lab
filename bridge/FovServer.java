@@ -12,6 +12,9 @@ public final class FovServer {
     private static final String[] PROPS = {"debug.oculus.eyeFovUp", "debug.oculus.eyeFovDown", "debug.oculus.eyeFovInward", "debug.oculus.eyeFovOutward"};
     private static String token;
     private static String[] target;
+    // headsetOverride as it was before the glasses view was applied. Some headsets
+    // already run with "1" after boot; forcing "0" on OFF skewed the stereo view.
+    private static String baseOverride;
     private static String run(String... command) throws Exception {
         Process p = new ProcessBuilder(command).redirectErrorStream(true).start();
         String out = new String(p.getInputStream().readAllBytes(), StandardCharsets.UTF_8).trim();
@@ -25,16 +28,20 @@ public final class FovServer {
             on &= value.equals(target[i]); off &= value.isEmpty();
         }
         String override = run("/system/bin/getprop", "debug.oculus.headsetOverride");
-        if (off && !override.equals("1")) return "OFF";
+        // With every eyeFov prop cleared the runtime uses the headset default FoV,
+        // whatever headsetOverride is (Meta CLI behaviour).
+        if (off) return "OFF";
         return on && override.equals("1") ? "ON" : "CUSTOM";
     }
     private static String change(boolean enable) throws Exception {
         String[] old = new String[5];
         for(int i=0;i<4;i++) old[i] = run("/system/bin/getprop", PROPS[i]);
         old[4] = run("/system/bin/getprop", "debug.oculus.headsetOverride");
+        // Remember the pre-glasses override only while the glasses angles are not applied.
+        if (enable && old[0].isEmpty() && old[1].isEmpty() && old[2].isEmpty() && old[3].isEmpty()) baseOverride = old[4];
         try {
             for(int i=0;i<4;i++) run("/system/bin/setprop", PROPS[i], enable ? target[i] : "");
-            run("/system/bin/setprop", "debug.oculus.headsetOverride", enable ? "1" : "0");
+            run("/system/bin/setprop", "debug.oculus.headsetOverride", enable ? "1" : (baseOverride == null ? "" : baseOverride));
             String result = state();
             if (!result.equals(enable ? "ON" : "OFF")) throw new IOException("Verification failed");
             return result;
@@ -66,6 +73,8 @@ public final class FovServer {
         token = config.get(0).trim();
         if(!token.matches("[a-f0-9]{64}") || config.size()!=5) throw new IOException("Invalid config");
         target = config.subList(1,5).toArray(new String[0]);
+        // Fallback when OFF arrives before any ON in this helper's lifetime.
+        baseOverride = run("/system/bin/getprop", "debug.oculus.headsetOverride");
         for(String angle: target) if(!angle.matches("[0-9]+(\\.[0-9]+)?") || Float.parseFloat(angle)<=0 || Float.parseFloat(angle)>90) throw new IOException("Invalid angle");
         try(ServerSocket server = new ServerSocket()) {
             server.bind(new InetSocketAddress(InetAddress.getByName("127.0.0.1"),38667),4);
